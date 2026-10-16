@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -21,16 +25,34 @@ jobs:
       - name: Scan dependencies for vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
 
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.14.0
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.4"
+
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive examples
+
+      - name: Check generated documentation
+        run: |
+          make docs
+          git diff --exit-code -- docs
+
       - name: Start xyOps
         run: |
-          # Pinned to xyOps v1.1.2; check the local version before bumping.
+          # Pinned to xyOps v1.1.7; check the local version before bumping.
           # A user-defined network plus a fixed hostname lets a remote satellite
           # resolve the master by name: xyOps derives its host id from the hostname.
           docker network create xyops-net
           docker run -d --name xyops --hostname xyops-ci --network xyops-net -p 5522:5522 \
             -e XYOPS_masters=xyops-ci \
             -e XYOPS_xysat_local=true \
-            ghcr.io/pixlcore/xyops@sha256:0e25c5ad29273aec482b28b21f2590e94f2bea6808edd4917e26a29987f86a27
+            ghcr.io/pixlcore/xyops@sha256:37703ec43a588c6d47b68b7558eaee936e841ac31f876ccea819ba1500ca3d15
           for i in $(seq 1 30); do
             if curl -sf http://localhost:5522/api/app/ping/v1 >/dev/null; then
               echo "xyOps is ready"
@@ -64,13 +86,13 @@ jobs:
         run: |
           # A satellite is a remote worker that registers itself as a server, so
           # the server tests can adopt one that is not the embedded "local" node.
-          # xySat is pinned like xyOps; check the version before bumping.
+          # xySat is pinned to v1.1.6; check the version before bumping.
           TOKEN=$(curl -s -H "X-API-Key: $XYOPS_API_KEY" \
             "http://localhost:5522/api/app/get_satellite_token/v1?expires=3600" | \
             python3 -c "import json,sys; print(json.load(sys.stdin)['token'])")
           docker run -d --name xysat --network xyops-net \
             -e "XYOPS_setup=http://xyops-ci:5522/api/app/satellite/config?t=$TOKEN" \
-            ghcr.io/pixlcore/xysat@sha256:7855d5b99a9d2223b2535c6bdebf5dddfa73ac5cc2c40d0999a5c4c691c07204
+            ghcr.io/pixlcore/xysat@sha256:62dd88f4696cf18473d1e602f94c5ddf34f5570678adc5d0f2976003475cf298
           for i in $(seq 1 60); do
             SAT_ID=$(curl -s -H "X-API-Key: $XYOPS_API_KEY" \
               "http://localhost:5522/api/app/get_servers/v1" | \
@@ -86,32 +108,10 @@ jobs:
           docker logs xysat >&2 || true
           exit 1
 
-      - name: Run Go test compilation check
-        env:
-          XYOPS_ENDPOINT: http://localhost:5522
-          XYOPS_API_KEY: ${{ steps.bootstrap.outputs.api_key }}
-        run: go test ./...
-
       - name: Run acceptance tests
         env:
           XYOPS_ENDPOINT: http://localhost:5522
           XYOPS_API_KEY: ${{ steps.bootstrap.outputs.api_key }}
+          # Lets the offline test restart the satellite container by name.
+          XYOPS_SATELLITE_CONTAINER: xysat
         run: TF_ACC=1 go test ./...
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
-        with:
-          version: v2.14.0
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.16.4"
-
-      - name: Check Terraform formatting
-        run: terraform fmt -check -recursive examples
-
-      - name: Check generated documentation
-        run: |
-          make docs
-          git diff --exit-code -- docs
