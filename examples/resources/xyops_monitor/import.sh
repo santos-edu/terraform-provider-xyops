@@ -1,0 +1,1 @@
+terraform import xyops_monitor.cpu_load cpu_load

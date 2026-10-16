@@ -1,0 +1,1 @@
+terraform import xyops_event.hello_event hello_event

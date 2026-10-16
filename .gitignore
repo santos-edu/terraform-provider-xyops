@@ -1,0 +1,23 @@
+# Provider binary
+terraform-provider-xyops
+dist/
+
+# Local Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Local secrets
+.env
+
+# Go
+*.test
+*.out
+
+# Local notes and agent tooling. Kept on disk, not published.
+.local/
+.agents/
+skills-lock.json

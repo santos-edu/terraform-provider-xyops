@@ -1,0 +1,1 @@
+terraform import xyops_plugin.hello_shell hello_shell

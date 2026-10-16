@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Scan dependencies for vulnerabilities
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+
+      - name: Start xyOps
+        run: |
+          # Pinned to xyOps v1.1.2; check the local version before bumping.
+          # A user-defined network plus a fixed hostname lets a remote satellite
+          # resolve the master by name: xyOps derives its host id from the hostname.
+          docker network create xyops-net
+          docker run -d --name xyops --hostname xyops-ci --network xyops-net -p 5522:5522 \
+            -e XYOPS_masters=xyops-ci \
+            -e XYOPS_xysat_local=true \
+            ghcr.io/pixlcore/xyops@sha256:0e25c5ad29273aec482b28b21f2590e94f2bea6808edd4917e26a29987f86a27
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5522/api/app/ping/v1 >/dev/null; then
+              echo "xyOps is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "xyOps did not become ready" >&2
+          exit 1
+
+      - name: Bootstrap xyOps API key
+        id: bootstrap
+        run: |
+          CSRF=$(curl -s -X POST http://localhost:5522/api/user/login \
+            -H "Content-Type: application/json" \
+            -c cookies.txt \
+            -d '{"username":"admin","password":"admin"}' | \
+            python3 -c "import json,sys; print(json.load(sys.stdin)['csrf_token'])")
+          PLAIN=$(curl -s -X POST http://localhost:5522/api/app/create_api_key/v1 \
+            -H "Content-Type: application/json" \
+            -H "X-CSRF-Token: $CSRF" \
+            -b cookies.txt \
+            -d '{"title":"ci","privileges":{"admin":1}}' | \
+            python3 -c "import json,sys; print(json.load(sys.stdin)['plain_key'])")
+          echo "::add-mask::$PLAIN"
+          echo "api_key=$PLAIN" >> "$GITHUB_OUTPUT"
+
+      - name: Start xyOps satellite
+        env:
+          XYOPS_API_KEY: ${{ steps.bootstrap.outputs.api_key }}
+        run: |
+          # A satellite is a remote worker that registers itself as a server, so
+          # the server tests can adopt one that is not the embedded "local" node.
+          # xySat is pinned like xyOps; check the version before bumping.
+          TOKEN=$(curl -s -H "X-API-Key: $XYOPS_API_KEY" \
+            "http://localhost:5522/api/app/get_satellite_token/v1?expires=3600" | \
+            python3 -c "import json,sys; print(json.load(sys.stdin)['token'])")
+          docker run -d --name xysat --network xyops-net \
+            -e "XYOPS_setup=http://xyops-ci:5522/api/app/satellite/config?t=$TOKEN" \
+            ghcr.io/pixlcore/xysat@sha256:7855d5b99a9d2223b2535c6bdebf5dddfa73ac5cc2c40d0999a5c4c691c07204
+          for i in $(seq 1 60); do
+            SAT_ID=$(curl -s -H "X-API-Key: $XYOPS_API_KEY" \
+              "http://localhost:5522/api/app/get_servers/v1" | \
+              python3 -c "import json,sys; o=json.load(sys.stdin); print(next((k for k in (o.get('servers') or {}) if k != 'local'), ''))")
+            if [ -n "$SAT_ID" ]; then
+              echo "Remote satellite registered as $SAT_ID"
+              echo "XYOPS_SATELLITE_ID=$SAT_ID" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "xyOps satellite did not register in time" >&2
+          docker logs xysat >&2 || true
+          exit 1
+
+      - name: Run Go test compilation check
+        env:
+          XYOPS_ENDPOINT: http://localhost:5522
+          XYOPS_API_KEY: ${{ steps.bootstrap.outputs.api_key }}
+        run: go test ./...
+
+      - name: Run acceptance tests
+        env:
+          XYOPS_ENDPOINT: http://localhost:5522
+          XYOPS_API_KEY: ${{ steps.bootstrap.outputs.api_key }}
+        run: TF_ACC=1 go test ./...
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.14.0
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.4"
+
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive examples
+
+      - name: Check generated documentation
+        run: |
+          make docs
+          git diff --exit-code -- docs

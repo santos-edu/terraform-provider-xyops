@@ -1,0 +1,38 @@
+services:
+  xysat-remote:
+    image: ghcr.io/pixlcore/xysat:v1.1.6
+    container_name: xyops-xysat-remote
+    init: true
+    restart: unless-stopped
+    profiles: ["satellite"]
+    volumes:
+      - xysat_conf_remote:/etc/xysat
+    environment:
+      XYSAT_config_file: /etc/xysat/config.json
+      XYOPS_setup: http://host.docker.internal:5522/api/app/satellite/config?t=${XYOPS_SATELLITE_SETUP_KEY}
+    depends_on:
+      - xyops
+  xyops:
+    image: ghcr.io/pixlcore/xyops:v1.1.7
+    container_name: xyops-dev
+    hostname: xyops-dev
+    environment:
+      XYOPS_masters: xyops-dev
+      XYOPS_xysat_local: "true"
+      XYOPS_base_app_url: http://localhost:5522
+    ports:
+      - "5522:5522"
+    volumes:
+      - xyops_data:/opt/xyops/data
+      - xyops_conf:/opt/xyops/conf
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:5522/api/app/ping/v1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+volumes:
+  xyops_data:
+  xyops_conf:
+  xysat_conf_remote:
