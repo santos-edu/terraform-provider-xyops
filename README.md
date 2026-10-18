@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/santos-edu/terraform-provider-xyops/actions/workflows/test.yml/badge.svg)](https://github.com/santos-edu/terraform-provider-xyops/actions/workflows/test.yml)
 
-Terraform provider for [xyOps](https://github.com/pixlcore/xyops), a server scheduler and monitor. Requires Terraform >= 1.3, a running xyOps instance, and an API key. Argument reference is in [`docs/`](docs/index.md).
+Terraform provider for [xyOps](https://github.com/pixlcore/xyops), a server scheduler and monitor. Published as [santos-edu/xyops](https://registry.terraform.io/providers/santos-edu/xyops). Requires Terraform >= 1.3, a running xyOps instance, and an API key. Argument reference is in [`docs/`](docs/index.md).
 
 ## Configuration
 
