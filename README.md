@@ -45,7 +45,7 @@ JSON attributes are compared by structure. Write them with `jsonencode()`. Refer
 
 ## Development
 
-Go 1.27.2. `.tool-versions` pins Terraform 1.17.1 and OpenTofu 1.13.0. `make compose-up` starts xyOps, `make build` writes the provider binary in the repository root, and `make testacc` runs the acceptance tests. Point `dev_overrides` for `santos-edu/xyops` at that directory. `make docs` regenerates `docs/`.
+Go 1.27.3. `.tool-versions` pins Terraform 1.17.1 and OpenTofu 1.13.0. `make compose-up` starts xyOps, `make build` writes the provider binary in the repository root, and `make testacc` runs the acceptance tests. Point `dev_overrides` for `santos-edu/xyops` at that directory. `make docs` regenerates `docs/`.
 
 Set `TF_ACC_TERRAFORM_PATH` to choose which CLI the acceptance tests run. CI runs them once with Terraform 1.17.1 and once with OpenTofu 1.13.0. For OpenTofu it also sets `TF_ACC_PROVIDER_HOST=registry.opentofu.org` and `TF_ACC_PROVIDER_NAMESPACE=hashicorp`.
 
