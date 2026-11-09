@@ -1,6 +1,6 @@
 module github.com/santos-edu/terraform-provider-xyops
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/hashicorp/terraform-plugin-framework v1.19.0

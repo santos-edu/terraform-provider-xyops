@@ -45,6 +45,6 @@ JSON attributes are compared by structure. Write them with `jsonencode()`. Refer
 
 ## Development
 
-Go 1.27.2. `make compose-up` starts xyOps, `make build` writes the provider binary in the repository root, and `make testacc` runs the acceptance tests. Point `dev_overrides` for `santos-edu/xyops` at that directory. `make docs` regenerates `docs/`.
+Go 1.27.3. `make compose-up` starts xyOps, `make build` writes the provider binary in the repository root, and `make testacc` runs the acceptance tests. Point `dev_overrides` for `santos-edu/xyops` at that directory. `make docs` regenerates `docs/`.
 
 To release, set the version in `CHANGELOG.md`, add the `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` repository secrets, and push a `vX.Y.Z` tag. GoReleaser opens a draft GitHub release. Publish the draft so the Terraform Registry can ingest it.
