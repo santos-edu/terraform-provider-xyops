@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/santos-edu/terraform-provider-xyops/actions/workflows/test.yml/badge.svg)](https://github.com/santos-edu/terraform-provider-xyops/actions/workflows/test.yml)
 
-Terraform provider for [xyOps](https://github.com/pixlcore/xyops), a server scheduler and monitor. Published as [santos-edu/xyops](https://registry.terraform.io/providers/santos-edu/xyops). Requires Terraform >= 1.3, a running xyOps instance, and an API key. Argument reference is in [`docs/`](docs/index.md).
+Provider for [xyOps](https://github.com/pixlcore/xyops), a server scheduler and monitor. The same configuration works in Terraform and OpenTofu. Published as [santos-edu/xyops](https://registry.terraform.io/providers/santos-edu/xyops) on the Terraform Registry and the [OpenTofu Registry](https://search.opentofu.org/provider/santos-edu/xyops/latest). Requires Terraform >= 1.3 or OpenTofu, a running xyOps instance, and an API key. Argument reference is in [`docs/`](docs/index.md).
 
 ## Configuration
 
@@ -45,6 +45,12 @@ JSON attributes are compared by structure. Write them with `jsonencode()`. Refer
 
 ## Development
 
-Go 1.27.3. `make compose-up` starts xyOps, `make build` writes the provider binary in the repository root, and `make testacc` runs the acceptance tests. Point `dev_overrides` for `santos-edu/xyops` at that directory. `make docs` regenerates `docs/`.
+Go 1.27.3. `.tool-versions` pins Terraform 1.17.1 and OpenTofu 1.13.0. `make compose-up` starts xyOps, `make build` writes the provider binary in the repository root, and `make testacc` runs the acceptance tests. Point `dev_overrides` for `santos-edu/xyops` at that directory. `make docs` regenerates `docs/`.
 
-To release, set the version in `CHANGELOG.md`, add the `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` repository secrets, and push a `vX.Y.Z` tag. GoReleaser opens a draft GitHub release. Publish the draft so the Terraform Registry can ingest it.
+Set `TF_ACC_TERRAFORM_PATH` to choose which CLI the acceptance tests run. CI runs them once with Terraform 1.17.1 and once with OpenTofu 1.13.0. For OpenTofu it also sets `TF_ACC_PROVIDER_HOST=registry.opentofu.org` and `TF_ACC_PROVIDER_NAMESPACE=hashicorp`.
+
+## Release
+
+Set the version in `CHANGELOG.md`, add the `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` repository secrets, and push a `vX.Y.Z` tag. GoReleaser opens a draft GitHub release. Publish the draft. The Terraform Registry and the OpenTofu Registry both index that release. `santos-edu/xyops` and its signing key are already registered, so a new version does not need another submission.
+
+Submit a new public key only when the signing key changes, using the [OpenTofu signing key form](https://github.com/opentofu/registry/issues/new?assignees=&labels=provider-key%2Csubmission&template=provider_key.yml&title=Provider+Key%3A+). Namespace `santos-edu`, provider `xyops`. The registry only processes that form in the browser.
