@@ -35,8 +35,9 @@ checksum:
   algorithm: sha256
 
 # The Terraform Registry rejects a release whose checksums are not signed with
-# the GPG key registered for the provider. GPG_FINGERPRINT comes from the
-# import-gpg step in .github/workflows/release.yml.
+# the GPG key registered for the provider. The OpenTofu Registry verifies the
+# same signature with the key already registered for santos-edu/xyops.
+# GPG_FINGERPRINT comes from the import-gpg step in .github/workflows/release.yml.
 signs:
   - artifacts: checksum
     args:

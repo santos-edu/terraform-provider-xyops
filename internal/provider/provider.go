@@ -30,7 +30,7 @@ func (p *xyopsProvider) Metadata(_ context.Context, _ provider.MetadataRequest, 
 
 func (p *xyopsProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Terraform provider for xyOps, a server scheduler and monitor. Set endpoint and api_key in the configuration, or provide XYOPS_ENDPOINT and XYOPS_API_KEY. xyops_server adopts a server that already registered itself and does not create or delete it.",
+		MarkdownDescription: "Provider for xyOps, a server scheduler and monitor. The same configuration works in Terraform and OpenTofu. Set endpoint and api_key in the configuration, or provide XYOPS_ENDPOINT and XYOPS_API_KEY. xyops_server adopts a server that already registered itself and does not create or delete it.",
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{Optional: true, Description: "xyOps API base URL. Required: set this value or provide XYOPS_ENDPOINT."},
 			"api_key":  schema.StringAttribute{Optional: true, Sensitive: true, Description: "xyOps API key. Set this value or provide XYOPS_API_KEY."},
